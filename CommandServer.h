@@ -2,26 +2,22 @@
 
 #include <Arduino.h>
 
-class CommandServer
-{
+class CommandServer {
 public:
     CommandServer();
-    bool registerStream(Print &stream);
-    bool registerCommand(const char *command, void (*handler)(const char *args));
-    void assembleCommand();
+    bool registerCommand(const char* command, bool (*handler)(bool firstCall, const char** args, uint8_t argCount));
+    void checkForCommand();
 
 private:
-    static const uint8_t MAX_COMMANDS = 10;
-
-    struct StreamInfo
-    {
-        Print *stream;
-        uint8_t logLevel;
-        StreamInfo *next;
-    };
-    StreamInfo *firstStream = nullptr, *lastStream = nullptr;
+    static const uint8_t MAX_COMMANDS = 10, MAX_ARGS = 4;
+    int8_t activeHandler = -1;
 
     String commandBuffer;
-    void (*commandHandlers[MAX_COMMANDS])(const char *args);
-    const char *registeredCommands[MAX_COMMANDS];
+    bool (*commandHandlers[MAX_COMMANDS])(bool firstCall, const char** args, uint8_t argCount) = { nullptr };
+    const char* registeredCommands[MAX_COMMANDS];
+    const char* commandArgs[MAX_ARGS];
+    uint8_t argCount = 0;
+
+    void processLine();
+    void splitTokens();
 };
