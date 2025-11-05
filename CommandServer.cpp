@@ -4,7 +4,7 @@
 
 #if defined(DEBUG_COMMAND_SERVER)
 bool DebugTestCommand(bool firstCall, const char **args, uint8_t argCount) {
-    Serial.printf("[%d] commands passed\n", argCount);
+    Serial.printf("[%d] arguments passed\n", argCount);
     for (uint8_t i = 0; i < argCount; i++) {
         Serial.printf("arg[%d] = [%s]\n", i, args[i]);
     }
