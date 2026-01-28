@@ -1,6 +1,12 @@
 #pragma once
 
+#if defined(ARDUINO)
 #include <Arduino.h>
+#endif // ARDUINO
+
+#if defined(ARDUINO_PC)
+#include <ArduinoPC.h>
+#endif // ARDUINO_PC
 
 class CommandServer {
 public:
