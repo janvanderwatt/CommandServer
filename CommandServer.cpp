@@ -25,7 +25,7 @@ bool CommandServer::registerCommand(const char *command, bool (*handler)(bool fi
         if (commandHandlers[i] == nullptr) {
             commandHandlers[i] = handler;
             registeredCommands[i] = command;
-            Serial.printf("Registered command handler for [%s] at position [%d]\n", command, i);
+            // Serial.printf("Registered command handler for [%s] at position [%d]\n", command, i);
             return true;
             break;
         }
@@ -50,6 +50,7 @@ void CommandServer::checkForCommand() {
     while (Serial.available()) {
         char c = (char)Serial.read();
         if (c == '\n') {
+            commandBuffer += ' ';   // fake a SPACE so that the end of the command can be found
             processLine();
             commandBuffer = "";
         } else if (c != '\r') {
@@ -60,18 +61,21 @@ void CommandServer::checkForCommand() {
 }
 
 void CommandServer::processLine() {
-    if (commandBuffer.length() == 0)
+    if (commandBuffer.length() == 1)    // there is a fake space
         return;
 
     // Split tokens
+    // Serial.printf("-- processing: [%s]\n", commandBuffer.c_str());
     splitTokens();
-    if (this->argCount == 0) {
-        return;
-    }
+    // if (this->argCount == 0) {
+    //     return;
+    // }
 
-    bool done = commandHandlers[activeHandler](false, this->commandArgs, this->argCount);
-    if (done) {
-        activeHandler = -1;
+    if (activeHandler >= 0) {
+        bool done = commandHandlers[activeHandler](false, this->commandArgs, this->argCount);
+        if (done) {
+            activeHandler = -1;
+        }
     }
 }
 
@@ -80,6 +84,7 @@ void CommandServer::splitTokens() {
     uint8_t argLength = 0, startOfArg = 0;
 
     this->argCount = 0;
+    const char *cmpCmd = commandBuffer.c_str();
 
     for (uint8_t i = 0; i < commandBuffer.length(); i++) {
         char c = commandBuffer[i];
@@ -89,29 +94,35 @@ void CommandServer::splitTokens() {
             commandBuffer[i] = 0; // terminate the string at this point
             // We have found a space, and we're not inside quotes
             if (!foundCommand) {
+                // Serial.printf("Comparing [%s] ", cmpCmd);
                 // This is the first argument, check if it matches any commands (CASE SENSITIVE!)
                 for (uint8_t j = 0; j < MAX_COMMANDS; j++) {
                     if (commandHandlers[j] != nullptr) {
-                        const char *cmpCmd = commandBuffer.c_str();
+                        // Serial.printf("[%s]", registeredCommands[j]);
                         if (strcmp(registeredCommands[j], cmpCmd) == 0) {
                             activeHandler = j;
                             startOfArg = i + 1;
                             foundCommand = true;
                             argLength = 0;
+                            // Serial.print("MATCH\n");
                             break;
                         }
                     }
                 }
                 if (!foundCommand) {
+                    // Serial.print("NO MATCH\n");
                     return;
                 }
             } else {
                 // We already have a matched command, check if the argument isn't zero length, and if not, add it to the command list
+                // Serial.printf("argLen [%d]", argLength);
                 if (argLength) {
-                    this->commandArgs[this->argCount] = commandBuffer.c_str() + startOfArg;
+                    this->commandArgs[this->argCount] = cmpCmd + startOfArg;
+                    // Serial.printf(" adding [%d]=[%s]", this->argCount, this->commandArgs[this->argCount]);
                     this->argCount++;
                     argLength = 0;
                 }
+                // Serial.print("\n");
                 startOfArg = i + 1;
             }
         } else {
@@ -125,5 +136,6 @@ void CommandServer::splitTokens() {
             this->argCount++;
             argLength = 0;
         }
+        // Serial.printf("index=[%d], argCount=[%d]\n", this->activeHandler, this->argCount);
     }
 }
